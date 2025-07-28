@@ -1,4 +1,4 @@
-import { useEffect, useState, RefObject } from 'react'
+import { useEffect, useState, type RefObject } from 'react'
 
 interface AIPopupData {
   lineIndex: number
@@ -9,7 +9,7 @@ interface AIPopupData {
 interface AIPopupProps {
   popup: AIPopupData
   onClose: () => void
-  editorRef: RefObject<HTMLTextAreaElement>
+  editorRef: RefObject<HTMLTextAreaElement | null>
   currentNote: string
 }
 
