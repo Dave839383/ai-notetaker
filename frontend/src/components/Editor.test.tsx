@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, fireEvent } from '@testing-library/react'
 import Editor from './Editor'
 
 describe('Editor', () => {
@@ -17,8 +17,8 @@ describe('Editor', () => {
       />
     )
 
-    const textarea = screen.getByPlaceholderText(/Write your notes here/)
-    fireEvent.change(textarea, { target: { value: 'Hello world' } })
+    const textarea = document.querySelector('textarea')
+    fireEvent.change(textarea!, { target: { value: 'Hello world' } })
 
     expect(mockOnChange).toHaveBeenCalledWith('Hello world')
   })
