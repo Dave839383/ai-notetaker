@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import Sidebar from './components/Sidebar'
+import Header from './components/Header'
 import Editor from './components/Editor'
 import AIPopup from './components/AIPopup'
 
@@ -92,29 +93,33 @@ function App() {
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [aiPopup])
 
+  // Use nested grids when the layout is hierarchical (e.g., header on top, then columns inside).
   return (
-    <div className="flex h-screen overflow-hidden">
-      <Sidebar 
-        notes={notes} 
-        onDeleteNote={handleDeleteNote}
-        onLoadNote={handleLoadNote}
-      />
-      <div className="flex-1 flex flex-col relative">
-        <Editor
-          ref={editorRef}
-          value={currentNote}
-          onChange={setCurrentNote}
-          onKeyUp={handleEditorKeyUp}
-          onSave={handleSaveNote}
+    <div className="h-screen grid grid-rows-[auto_1fr]">
+      <Header />
+      <div className="grid grid-cols-1 md:grid-cols-[250px_1fr] overflow-hidden">
+        <Sidebar 
+          notes={notes} 
+          onDeleteNote={handleDeleteNote}
+          onLoadNote={handleLoadNote}
         />
-        {aiPopup && (
-          <AIPopup
-            popup={aiPopup}
-            onClose={() => setAiPopup(null)}
-            editorRef={editorRef}
-            currentNote={currentNote}
+        <div className="flex-1 flex flex-col relative">
+          <Editor
+            ref={editorRef}
+            value={currentNote}
+            onChange={setCurrentNote}
+            onKeyUp={handleEditorKeyUp}
+            onSave={handleSaveNote}
           />
-        )}
+          {aiPopup && (
+            <AIPopup
+              popup={aiPopup}
+              onClose={() => setAiPopup(null)}
+              editorRef={editorRef}
+              currentNote={currentNote}
+            />
+          )}
+        </div>
       </div>
     </div>
   )

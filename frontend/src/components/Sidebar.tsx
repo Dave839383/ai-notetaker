@@ -1,3 +1,6 @@
+import { Button } from "@/components/ui/button"
+import { Plus } from "lucide-react"
+
 interface SidebarProps {
   notes: string[]
   onDeleteNote: (index: number) => void
@@ -7,7 +10,12 @@ interface SidebarProps {
 const Sidebar = ({ notes, onDeleteNote, onLoadNote }: SidebarProps) => {
   return (
     <div className="w-64 bg-gray-100 border-r border-gray-300 p-4 overflow-y-auto">
-      <h2 className="text-xl font-semibold mb-4 text-gray-800">My Notes</h2>
+      <div className="flex justify-end items-center">
+        <Button size="icon" variant="outline" className="cursor-pointer">
+            <Plus className="h-4 w-4" />
+            <span className="sr-only">New Note</span>
+        </Button>
+      </div>
       <ul className="space-y-2">
         {notes.map((note, index) => (
           <li key={index} className="bg-white border border-gray-300 rounded-md p-3 cursor-pointer hover:bg-gray-50 transition-colors">
