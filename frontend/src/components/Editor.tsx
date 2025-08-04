@@ -7,8 +7,12 @@ interface EditorProps {
   onSave: () => void
 }
 
+// forwardRef is used to pass the ref to the textarea element
+// it wraps the function
 const Editor = forwardRef<HTMLTextAreaElement, EditorProps>(({ value, onChange, onKeyUp, onSave }, ref) => {
   return (
+    // flex-1 is used to make the textarea take up all available space
+    // flex-col is used to make the textarea and button stack vertically
     <div className="flex-1 flex flex-col">
       <textarea
         ref={ref}

@@ -13,6 +13,7 @@ interface AIPopupData {
 function App() {
   const [notes, setNotes] = useState<string[]>([])
   const [currentNote, setCurrentNote] = useState('')
+  const [currentNoteIndex, setCurrentNoteIndex] = useState<number | null>(null) // Track which note is open
   const [aiPopup, setAiPopup] = useState<AIPopupData | null>(null)
   const editorRef = useRef<HTMLTextAreaElement>(null)
 
@@ -20,13 +21,35 @@ function App() {
     return `🤖 AI: This is a fake answer to '${question}'`
   }
 
+  const cleanupEmptyNotes = () => {
+    setNotes(prev => prev.filter(note => note.trim() !== ''))
+  }
+
   const handleSaveNote = (): void => {
     const text = currentNote.trim()
-    if (text) {
-      setNotes(prev => [...prev, text])
-      setCurrentNote('')
-      setAiPopup(null)
+    
+    if (currentNoteIndex !== null) {
+      // Update existing note
+      if (text === '') {
+        // Remove the note if it's empty
+        setNotes(prev => prev.filter((_, index) => index !== currentNoteIndex))
+      } else {
+        // Update the note with new text
+        setNotes(prev => prev.map((note, index) => 
+          index === currentNoteIndex ? text : note
+        ))
+      }
+    } else {
+      // Create new note (only if it has content)
+      if (text !== '') {
+        setNotes(prev => [text, ...prev])
+      }
     }
+    
+    cleanupEmptyNotes() // Remove any empty notes
+    setCurrentNote('')
+    setCurrentNoteIndex(null)
+    setAiPopup(null)
   }
 
   const handleDeleteNote = (index: number): void => {
@@ -35,9 +58,17 @@ function App() {
     setAiPopup(null)
   }
 
-  const handleLoadNote = (note: string): void => {
+  const handleLoadNote = (note: string, index: number): void => {
     setCurrentNote(note)
+    setCurrentNoteIndex(index) // Track which note is being edited
     setAiPopup(null)
+  }
+
+  const handleNewNote = (): void => {
+    setCurrentNote('')
+    setCurrentNoteIndex(0)
+    setAiPopup(null)
+    setNotes(prev => ['', ...prev])
   }
 
   const handleEditorKeyUp = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
@@ -96,12 +127,14 @@ function App() {
   // Use nested grids when the layout is hierarchical (e.g., header on top, then columns inside).
   return (
     <div className="h-screen grid grid-rows-[auto_1fr]">
-      <Header />
+      <Header  />
       <div className="grid grid-cols-1 md:grid-cols-[250px_1fr] overflow-hidden">
         <Sidebar 
           notes={notes} 
           onDeleteNote={handleDeleteNote}
           onLoadNote={handleLoadNote}
+          onNewNote={handleNewNote}
+          noteIndex={currentNoteIndex}
         />
         <div className="flex-1 flex flex-col relative">
           <Editor
