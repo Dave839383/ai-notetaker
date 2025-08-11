@@ -3,6 +3,8 @@ import Sidebar from './components/Sidebar'
 import Header from './components/Header'
 import Editor from './components/Editor'
 import AIPopup from './components/AIPopup'
+import axios from 'axios'
+import { API_CONFIG } from './config/api'
 
 interface AIPopupData {
   lineIndex: number
@@ -17,15 +19,23 @@ function App() {
   const [aiPopup, setAiPopup] = useState<AIPopupData | null>(null)
   const editorRef = useRef<HTMLTextAreaElement>(null)
 
-  const mockAIResponse = (question: string): string => {
-    return `🤖 AI: This is a fake answer to '${question}'`
+  const mockAIResponse = async (question: string): Promise<string> => {
+    try {
+      const response = await axios.post(`${API_CONFIG.baseURL}/question`, {
+        question: question
+      })
+      return `🤖 AI: ${response.data.answer}`
+    } catch (error) {
+      console.error('Error asking AI:', error)
+      return `🤖 AI: Sorry, I couldn't process your question.`
+    }
   }
-
   const cleanupEmptyNotes = () => {
     setNotes(prev => prev.filter(note => note.trim() !== ''))
   }
 
   const handleSaveNote = (): void => {
+    console.log('handleSaveNote ', currentNote)
     const text = currentNote.trim()
     
     if (currentNoteIndex !== null) {
@@ -53,12 +63,24 @@ function App() {
   }
 
   const handleDeleteNote = (index: number): void => {
-    setNotes(prev => prev.filter((_, i) => i !== index))
-    setCurrentNote('')
+    console.log('handleDeleteNote ', index)
+    console.log('notes length ', notes.length)
+    const remainingNotes = notes.filter((_, i) => i !== index)
+    setNotes(remainingNotes)
+    if (remainingNotes.length < 1) {
+      setCurrentNote('')
+      setCurrentNoteIndex(null)
+    } else {
+      console.log('notes length ', notes.length)
+      console.log('handleDeleteNote ', remainingNotes[0])
+      setCurrentNote(remainingNotes[0])
+      setCurrentNoteIndex(0)
+    }
     setAiPopup(null)
   }
 
   const handleLoadNote = (note: string, index: number): void => {
+    console.log('handleLoadNote ', note, index)
     setCurrentNote(note)
     setCurrentNoteIndex(index) // Track which note is being edited
     setAiPopup(null)
@@ -71,7 +93,7 @@ function App() {
     setNotes(prev => ['', ...prev])
   }
 
-  const handleEditorKeyUp = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
+  const handleEditorKeyUp = async (e: React.KeyboardEvent<HTMLTextAreaElement>): Promise<void> => {
     if (e.key === 'Enter') {
       const lines = currentNote.split('\n')
       const cursorPosition = e.currentTarget.selectionStart
@@ -97,7 +119,7 @@ function App() {
           setAiPopup({
             lineIndex: prevLineIndex,
             question,
-            response: mockAIResponse(question)
+            response: await mockAIResponse(question)
           })
         }
       }
@@ -120,10 +142,33 @@ function App() {
   }
 
   useEffect(() => {
+    // only add the event listener on mount, not on every re-render
+    // useEffect only runs when the dependencies change, so empty array means run only once
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [aiPopup])
+  }, [])
 
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (editorRef.current && !editorRef.current.contains(e.target as Node)) {
+        console.log('Clicked outside editor')
+        if (currentNote.trim()) {
+          console.log('handleClickOutside ', currentNote)
+        }
+      }
+    }
+  
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [currentNote])
+
+  useEffect(() => {
+    console.log('currentNote changed to:', currentNote)
+  }, [currentNote])
+  
+  useEffect(() => {
+    console.log('notes changed to:', notes)
+  }, [notes])
   // Use nested grids when the layout is hierarchical (e.g., header on top, then columns inside).
   return (
     <div className="h-screen grid grid-rows-[auto_1fr]">
@@ -131,6 +176,7 @@ function App() {
       <div className="grid grid-cols-1 md:grid-cols-[250px_1fr] overflow-hidden">
         <Sidebar 
           notes={notes} 
+          currentNote={currentNote}
           onDeleteNote={handleDeleteNote}
           onLoadNote={handleLoadNote}
           onNewNote={handleNewNote}
@@ -143,6 +189,7 @@ function App() {
             onChange={setCurrentNote}
             onKeyUp={handleEditorKeyUp}
             onSave={handleSaveNote}
+            currentNoteIndex={currentNoteIndex}
           />
           {aiPopup && (
             <AIPopup

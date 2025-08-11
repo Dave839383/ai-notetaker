@@ -8,10 +8,18 @@ interface SidebarProps {
   onLoadNote: (note: string, index: number) => void
   onNewNote: () => void
   noteIndex: number | null
+  currentNote: string
 }
 
-const Sidebar = ({ notes, onDeleteNote, onLoadNote, onNewNote, noteIndex }: SidebarProps) => {
+const Sidebar = ({ notes, onDeleteNote, onLoadNote, onNewNote, noteIndex, currentNote }: SidebarProps) => {
   const hasEmptyNote = notes.some(note => note.trim() === '')
+  const truncateText = (text: string, maxLength: number) => {
+    const firstLine = text.split('\n')[0]
+    if (firstLine.length <= maxLength) {
+      return firstLine
+    }
+    return firstLine.slice(0, maxLength) + '...'
+  }
 
   return (
     <div className="w-64 bg-gray-100 border-r border-gray-300 p-4 overflow-y-auto">
@@ -36,17 +44,23 @@ const Sidebar = ({ notes, onDeleteNote, onLoadNote, onNewNote, noteIndex }: Side
               <span 
                 className="flex-1 text-sm text-gray-700 cursor-pointer"
               >
-                {note.split('\n')[0].slice(0, 20)}...
+                {noteIndex === index 
+                  ? truncateText(currentNote, 20)
+                  : truncateText(note, 20)
+                }
               </span>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-6 w-6">
+                  <Button variant="invisible" size="icon" className="h-6 w-6">
                     <MoreHorizontal className="h-4 w-4" />
                     <span className="sr-only">More Options</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => onDeleteNote(index)}>
+                  <DropdownMenuItem onClick={(e) => { 
+                    e.stopPropagation()
+                    onDeleteNote(index)
+                  }}>
                     <Trash2 className="mr-2 h-4 w-4" />
                     Delete
                   </DropdownMenuItem>
