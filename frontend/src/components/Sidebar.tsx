@@ -2,17 +2,22 @@ import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { MoreHorizontal, Plus, Trash2 } from "lucide-react"
 
+interface Note {
+  id: string
+  text: string
+}
+
 interface SidebarProps {
-  notes: string[]
+  notes: Note[]
   onDeleteNote: (index: number) => void
-  onLoadNote: (note: string, index: number) => void
+  onLoadNote: (note: Note, index: number) => void
   onNewNote: () => void
   noteIndex: number | null
-  currentNote: string
+  currentNote: Note
 }
 
 const Sidebar = ({ notes, onDeleteNote, onLoadNote, onNewNote, noteIndex, currentNote }: SidebarProps) => {
-  const hasEmptyNote = notes.some(note => note.trim() === '')
+  const hasEmptyNote = notes.some(note => note.text.trim() === '')
   const truncateText = (text: string, maxLength: number) => {
     const firstLine = text.split('\n')[0]
     if (firstLine.length <= maxLength) {
@@ -45,8 +50,8 @@ const Sidebar = ({ notes, onDeleteNote, onLoadNote, onNewNote, noteIndex, curren
                 className="flex-1 text-sm text-gray-700 cursor-pointer"
               >
                 {noteIndex === index 
-                  ? truncateText(currentNote, 20)
-                  : truncateText(note, 20)
+                  ? truncateText(currentNote.text, 20)
+                  : truncateText(note.text, 20)
                 }
               </span>
               <DropdownMenu>
