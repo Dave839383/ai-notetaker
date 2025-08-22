@@ -12,9 +12,14 @@ interface AIPopupData {
   response: string
 }
 
+interface Note {
+  id: string
+  text: string
+}
+
 function App() {
-  const [notes, setNotes] = useState<string[]>([])
-  const [currentNote, setCurrentNote] = useState('')
+  const [notes, setNotes] = useState<Note[]>([])
+  const [currentNote, setCurrentNote] = useState<Note>({ id: '', text: '' })
   const [currentNoteIndex, setCurrentNoteIndex] = useState<number | null>(null) // Track which note is open
   const [aiPopup, setAiPopup] = useState<AIPopupData | null>(null)
   const editorRef = useRef<HTMLTextAreaElement>(null)
@@ -30,15 +35,34 @@ function App() {
       return `🤖 AI: Sorry, I couldn't process your question.`
     }
   }
-  const cleanupEmptyNotes = () => {
-    setNotes(prev => prev.filter(note => note.trim() !== ''))
+
+  const createNoteResponse = async (note: string): Promise<string> => {
+    try {
+      const response = await axios.post(`${API_CONFIG.baseURL}/note`, {
+        text: note
+      })
+      
+      // Check if response was successful
+      if (response.status >= 200 && response.status < 300) {
+        return response.data.id
+      } else {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
+    } catch (error) {
+      console.error('Error creating note:', error)
+      throw error // Re-throw to let caller handle it
+    }
   }
 
-  const handleSaveNote = (): void => {
-    console.log('handleSaveNote ', currentNote)
-    const text = currentNote.trim()
+  const cleanupEmptyNotes = () => {
+    setNotes(prev => prev.filter(note => note.text.trim() !== ''))
+  }
+
+  const handleSaveNote = async (): Promise<void> => {
+    console.log("handleSaveNote ", currentNoteIndex)
+    const text = currentNote.text.trim()
     
-    if (currentNoteIndex !== null) {
+    if (currentNote.id !== '') {
       // Update existing note
       if (text === '') {
         // Remove the note if it's empty
@@ -46,18 +70,31 @@ function App() {
       } else {
         // Update the note with new text
         setNotes(prev => prev.map((note, index) => 
-          index === currentNoteIndex ? text : note
+          index === currentNoteIndex ? { ...note, text } : note
         ))
       }
     } else {
       // Create new note (only if it has content)
       if (text !== '') {
-        setNotes(prev => [text, ...prev])
+        try {
+          const noteId = await createNoteResponse(text)
+          
+          // Check if the response was successful
+          if (noteId && noteId !== 'Error creating note') {
+            setNotes(prev => [{ id: noteId, text }, ...prev])
+          } else {
+            console.error('Failed to create note:', noteId)
+            // Optionally show error to user
+          }
+        } catch (error) {
+          console.error('Error creating note:', error)
+          // Optionally show error to user
+        }
       }
     }
     
     cleanupEmptyNotes() // Remove any empty notes
-    setCurrentNote('')
+    setCurrentNote({ id: '', text: '' })
     setCurrentNoteIndex(null)
     setAiPopup(null)
   }
@@ -68,7 +105,7 @@ function App() {
     const remainingNotes = notes.filter((_, i) => i !== index)
     setNotes(remainingNotes)
     if (remainingNotes.length < 1) {
-      setCurrentNote('')
+      setCurrentNote({ id: '', text: '' })
       setCurrentNoteIndex(null)
     } else {
       console.log('notes length ', notes.length)
@@ -79,7 +116,7 @@ function App() {
     setAiPopup(null)
   }
 
-  const handleLoadNote = (note: string, index: number): void => {
+  const handleLoadNote = (note: Note, index: number): void => {
     console.log('handleLoadNote ', note, index)
     setCurrentNote(note)
     setCurrentNoteIndex(index) // Track which note is being edited
@@ -87,15 +124,15 @@ function App() {
   }
 
   const handleNewNote = (): void => {
-    setCurrentNote('')
+    setCurrentNote({ id: '', text: '' })
     setCurrentNoteIndex(0)
     setAiPopup(null)
-    setNotes(prev => ['', ...prev])
+    setNotes(prev => [{ id: 'new', text: '' }, ...prev])
   }
 
   const handleEditorKeyUp = async (e: React.KeyboardEvent<HTMLTextAreaElement>): Promise<void> => {
     if (e.key === 'Enter') {
-      const lines = currentNote.split('\n')
+      const lines = currentNote.text.split('\n')
       const cursorPosition = e.currentTarget.selectionStart
 
       // Figure out which line was just submitted
@@ -131,7 +168,7 @@ function App() {
       setAiPopup(null)
       // Focus back on the editor and select the @ai line
       if (editorRef.current) {
-        const lines = currentNote.split('\n')
+        const lines = currentNote.text.split('\n')
         const charStart = lines.slice(0, aiPopup.lineIndex).join('\n').length + (aiPopup.lineIndex > 0 ? 1 : 0)
         const lineLength = lines[aiPopup.lineIndex]?.length || 0
 
@@ -152,7 +189,7 @@ function App() {
     const handleClickOutside = (e: MouseEvent) => {
       if (editorRef.current && !editorRef.current.contains(e.target as Node)) {
         console.log('Clicked outside editor')
-        if (currentNote.trim()) {
+        if (currentNote.text.trim()) {
           console.log('handleClickOutside ', currentNote)
         }
       }
@@ -185,18 +222,18 @@ function App() {
         <div className="flex-1 flex flex-col relative">
           <Editor
             ref={editorRef}
-            value={currentNote}
-            onChange={setCurrentNote}
+            value={currentNote.text}
+            onChange={(text) => setCurrentNote(prev => ({ ...prev, text }))}  // ✅ Update text while preserving ID
             onKeyUp={handleEditorKeyUp}
-            onSave={handleSaveNote}
-            currentNoteIndex={currentNoteIndex}
+            onSave={handleSaveNote}  // ✅ This is fine
+            currentNoteIndex={currentNoteIndex}  // ✅ Add this
           />
           {aiPopup && (
             <AIPopup
               popup={aiPopup}
               onClose={() => setAiPopup(null)}
               editorRef={editorRef}
-              currentNote={currentNote}
+              currentNote={currentNote.text}
             />
           )}
         </div>
@@ -205,4 +242,4 @@ function App() {
   )
 }
 
-export default App 
+export default App
